@@ -28,16 +28,4 @@ if not serial_port.is_open:
 else:
     print("Serial port already open :)")
 
-
-
-while True:
-    try:
-        if serial_port.inWaiting() > 0:
-            message = serial_port.readline()[:-1].decode("utf-8") 
-            print("Se recibio: --{}--".format(message))
-    except KeyboardInterrupt:
-        print("Serial sesion ending...")
-        time.sleep(1)
-        serial_port.close()
-        break
-
+serial_port.write("s23,54,65\n".encode('utf-8'))
