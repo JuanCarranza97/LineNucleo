@@ -21,7 +21,7 @@ def thread_serial(serial_port):
                 char = message[0]
                 digits = message[1:]
 
-                if digits.find(','):
+                if digits.find(',') :
                     digits = digits.split(',')
                 print("Char: {}, Digits: {}".format(char,digits))
             else:
