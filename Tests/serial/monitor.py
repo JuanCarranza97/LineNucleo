@@ -1,8 +1,6 @@
 import mbed as mbed
 import argparse
 import time
-import threading
-import re
 
 def receive_a(digits):
     print("G: Se recibio {}".format(digits))
