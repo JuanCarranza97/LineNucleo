@@ -2,18 +2,20 @@ import serial,platform,argparse
 import time
 import threading
 import re
+import logging 
 
 serialThreadStatus = False
+logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
 def thread_serial(serial_port):
     global serialThreadStatus
     serialThreadStatus=True
 
-    print("Serial Thread Listening")
+    logging.debug("Serial Thread Listening")
     while serialThreadStatus:
         if serial_port.inWaiting() > 0:
             message = serial_port.readline()[:-1].decode("utf-8") 
-            print("Se recibio: --{}--".format(message))
+            logging.debug("Se recibio: --{}--".format(message))
 
             matcher = re.compile(r'[A-Za-z][-]?[0-9]+([,][-]?[0-9]+)*$')
             
@@ -23,16 +25,16 @@ def thread_serial(serial_port):
 
                 if digits.find(',') :
                     digits = digits.split(',')
-                print("Char: {}, Digits: {}".format(char,digits))
+                logging.debug("Char: {}, Digits: {}".format(char,digits))
             else:
-                print("Expression doesn't match")
-                print(message)
+                logging.error("Expression doesn't match")
+                logging.error(message)
 
-    print("Serial Thread: finishing")
+    logging.debug("Serial Thread: finishing")
 
 def send_data(port,caracter,data=[0]):
     if not port.is_open:
-        print("Port is closed, opening port to send message")
+        logging.info("Port is closed, opening port to send message")
         port.open()
     
     message = caracter
@@ -45,20 +47,20 @@ def send_data(port,caracter,data=[0]):
 def configure_port(port_name):  
     if platform.system() == "Windows":
         if not port_name.startswith("COM"):
-            print("Windows only support COMX ports")
+            logging.error("Windows only support COMX ports")
             exit(2)
     else:
-        print("Is not windows")
+        logging.error("Is not windows")
 
     serial_port = serial.Serial(port_name,baudrate=115200)
     if not serial_port.is_open:
         try:
             serial_port.open()
         except:
-            print("No able to open port")
+            logging.error("No able to open port")
             exit(2)
     else:
-        print("Serial port already open :)")
+        logging.info("Serial port already open :)")
 
     return serial_port
 
@@ -79,36 +81,38 @@ class receiver_port:
         global serialThreadStatus
         serialThreadStatus=True
 
-        #print("Serial Thread Listening")
+        logging.debug("Serial Thread Listening")
         while serialThreadStatus:
             if serial_port.inWaiting() > 0:
                 message = serial_port.readline()[:-1].decode("utf-8") 
-                #print("Se recibio: --{}--".format(message))
+                logging.debug("Se recibio: --{}--".format(message))
 
                 matcher = re.compile(r'[A-Za-z][-]?[0-9]+([,][-]?[0-9]+)*$')
-                
+
                 if matcher.match(message):
                     char = message[0]
                     digits = message[1:]
 
                     if digits.find(',') :
                         digits = digits.split(',')
-                    #print("Char: {}, Digits: {}".format(char,digits))
+                    logging.debug("Char: {}, Digits: {}".format(char,digits))
+                    char_found = False
+                    for i in self.receiver:
+                        if i.caracter == char:
+                            logging.debug("El caracter {} fue encontrado".format(char))
+                            i.function(digits)
+                            char_found=True
+                    
+                    if not char_found:
+                        logging.info("Caracter '{}' was not found".format(char))
+
                 else:
-                    print("Expression doesn't match")
-                    print(message)
-
-                char_found = False
-                for i in self.receiver:
-                    if i.caracter == char:
-                        #print("El caracter {} fue encontrado".format(char))
-                        i.function(digits)
-                        char_found=True
-                
-                if not char_found:
-                    print("Caracter '{}' was not found".format(char))
-
-        #print("Serial Thread: finishing")
+                    if message.startswith("ERROR:"):
+                        logging.error("BOARD: {}".format(message.replace("ERROR: ","")))
+                    elif message.startswith("DEBUG:"):
+                        logging.error("BOARD: {}".format(message.replace("DEBUG: ","")))
+                    elif message.startswith("INFO:"):
+                        logging.error("BOARD: {}".format(message.replace("INFO: ","")))
 
     def close(self):
         global serialThreadStatus
